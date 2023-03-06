@@ -13,13 +13,14 @@ provider:
   runtime: nodejs12.x
   stage: dev
   region: eu-west-1
-  # To load environment variables externally
-  # rename .env.yml to .env.yml and uncomment
-  # the following line. Also, make sure to not
-  # commit your .env.yml.
-  #
-  #environment:
-  #  SAMPLE_ENV_VAR: ${env:SAMPLE_ENV_VAR}
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource:
+        - arn:aws:dynamodb:*:*:table/*
 
 functions:
   getProductById:
@@ -28,9 +29,65 @@ functions:
       - http:
           path: products/{productId}
           method: get
+          cors: true
+
   getAllProducts:
     handler: handler.getAllProducts
     events:
       - http:
           path: products
           method: get
+          cors: true
+
+  createProduct:
+    handler: handler.createProduct
+    events:
+      - http:
+          path: products
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    products:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: car-shop-products
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+    stocks:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: car-shop-stocks
+        AttributeDefinitions:
+          - AttributeName: product_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: product_id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+    DynamoDBIamPolicy:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: lambda-dynamodb
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:Get
+              Resource: arn:aws:dynamodb:*:*:table/*
+        Roles:
+          - Ref: IamRoleLambdaExecution
