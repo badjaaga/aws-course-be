@@ -5,29 +5,25 @@ provider:
   name: aws
   runtime: nodejs16.x
   stage: dev
-  region: ${env:REGION}
+  region: eu-west-1
 
   apiGateway:
     minimumCompressionSize: 1024
     shouldStartNameWithService: true
-  environment:
-    REGION: ${env:REGION}
-    IMPORT_BUCKET_ARN: ${env:IMPORT_BUCKET_ARN}
-    AWS_ACCOUNT_ID:
-      Ref: AWS::AccountId
-    SQS_URL: ${env:SQS_URL}
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action: "s3:ListBucket"
-      Resource:
-        - ${env:IMPORT_BUCKET_ARN}
-    - Effect: "Allow"
-      Action: "s3:*"
-      Resource:
-        - ${env:IMPORT_BUCKET_ARN}/*
-    - Effect: "Allow"
-      Action: "sqs:*"
-      Resource: ${env:SQS_ARN}
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action: "s3:ListBucket"
+          Resource:
+            - "arn:aws:s3:::cars-bucket-aws"
+        - Effect: "Allow"
+          Action: "s3:*"
+          Resource:
+            - "arn:aws:s3:::cars-bucket-aws/*"
+        - Effect: "Allow"
+          Action: "sqs:*"
+          Resource: "arn:aws:sqs:eu-west-1:877317193743:cars-service-que"
 
 plugins:
   - serverless-webpack
@@ -89,13 +85,22 @@ functions:
             parameters:
               querystrings:
                 name: true
-          cors: true
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
 
   importFileParser:
     handler: handler.importFileParser
     events:
       - s3:
-          bucket: ${env:IMPORT_BUCKET_NAME}
+          bucket: "cars-bucket-aws"
           event: s3:ObjectCreated:*
           rules:
             - prefix: uploaded/
