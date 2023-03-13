@@ -4,7 +4,9 @@
   "description": "A TypeScript starter for Serverless Framework",
   "main": "handler.js",
   "scripts": {
-    "test": "serverless-bundle test"
+    "test": "serverless-bundle test",
+    "run dynamoDB car-shop-products": "aws dynamodb batch-write-item --request-items file://products.json",
+    "run dynamoDB car-shop-stocks": "aws dynamodb batch-write-item --request-items file://stocks.json"
   },
   "author": "",
   "license": "MIT",
@@ -15,9 +17,13 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.64",
     "@types/jest": "^26.0.14",
-    "serverless-bundle": "3.2.1",
+    "serverless-bundle": "^6.0.0",
     "serverless-dotenv-plugin": "^3.0.0",
     "serverless-offline": "^6.8.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.284.0",
+    "@aws-sdk/lib-dynamodb": "^3.284.0",
+    "uuid": "^9.0.0"
+  }
 }
