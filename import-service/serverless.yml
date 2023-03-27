@@ -1,107 +1,60 @@
-service: import-service
-frameworkVersion: "3"
+service: import-service-27-03
+
+plugins:
+  - serverless-esbuild
+  - serverless-offline
 
 provider:
   name: aws
-  runtime: nodejs16.x
+  runtime: nodejs12.x
   stage: dev
   region: eu-west-1
 
-  apiGateway:
-    minimumCompressionSize: 1024
-    shouldStartNameWithService: true
-  iam:
-    role:
-      statements:
-        - Effect: "Allow"
-          Action: "s3:ListBucket"
-          Resource:
-            - "arn:aws:s3:::cars-bucket-aws"
-        - Effect: "Allow"
-          Action: "s3:*"
-          Resource:
-            - "arn:aws:s3:::cars-bucket-aws/*"
-        - Effect: "Allow"
-          Action: "sqs:*"
-          Resource: "arn:aws:sqs:eu-west-1:877317193743:cars-service-que"
-
-plugins:
-  - serverless-webpack
-  - serverless-dotenv-plugin
-  - serverless-offline
-
-custom:
-  webpack:
-    webpackConfig: "webpack.config.js"
-    includeModules: true
-
-resources:
-  Resources:
-    GatewayResponseDenied:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-        ResponseType: ACCESS_DENIED
-        RestApiId:
-          Ref: 'ApiGatewayRestApi'
-    GatewayResponseUnauthorized:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-        ResponseType: UNAUTHORIZED
-        RestApiId:
-          Ref: 'ApiGatewayRestApi'
-    GatewayResponseDefault4XX:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-        ResponseType: DEFAULT_4XX
-        RestApiId:
-          Ref: 'ApiGatewayRestApi'
-    GatewayResponseDefault5XX:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-        ResponseType: DEFAULT_5XX
-        RestApiId:
-          Ref: 'ApiGatewayRestApi'
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action: "s3:ListBucket"
+      Resource:
+        - "arn:aws:s3:::import-service-cars-27-03"
+    - Effect: "Allow"
+      Action:
+        - "s3:*"
+      Resource:
+        - "arn:aws:s3:::import-service-cars-27-03/*"
 
 functions:
   importProductsFile:
     handler: handler.importProductsFile
     events:
       - http:
-          method: GET
+          method: get
           path: import
           request:
             parameters:
               querystrings:
                 name: true
-          cors:
-            origin: "*"
-            headers:
-              - Content-Type
-              - X-Amz-Date
-              - Authorization
-              - X-Api-Key
-              - X-Amz-Security-Token
-              - X-Amz-User-Agent
-            allowCredentials: false
+          cors: true
 
   importFileParser:
     handler: handler.importFileParser
     events:
       - s3:
-          bucket: "cars-bucket-aws"
+          bucket: import-service-cars-27-03
           event: s3:ObjectCreated:*
           rules:
             - prefix: uploaded/
           existing: true
+
+custom:
+  esbuild:
+    packager: npm
+    bundle: true
+    minify: false
+    sourcemap: true
+    keepNames: true
+    target: node12
+    external:
+      - aws-sdk
+      - csv-parser
+    concurrency: 10
+    watch:
+      pattern: ["./index.ts", "src/**/*.ts", "./handler.ts"]
