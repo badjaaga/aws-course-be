@@ -1,0 +1,60 @@
+service: import-service-27-03
+
+plugins:
+  - serverless-esbuild
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  region: eu-west-1
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action: "s3:ListBucket"
+      Resource:
+        - "arn:aws:s3:::import-service-cars-27-03"
+    - Effect: "Allow"
+      Action:
+        - "s3:*"
+      Resource:
+        - "arn:aws:s3:::import-service-cars-27-03/*"
+
+functions:
+  importProductsFile:
+    handler: handler.importProductsFile
+    events:
+      - http:
+          method: get
+          path: import
+          request:
+            parameters:
+              querystrings:
+                name: true
+          cors: true
+
+  importFileParser:
+    handler: handler.importFileParser
+    events:
+      - s3:
+          bucket: import-service-cars-27-03
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: uploaded/
+          existing: true
+
+custom:
+  esbuild:
+    packager: npm
+    bundle: true
+    minify: false
+    sourcemap: true
+    keepNames: true
+    target: node12
+    external:
+      - aws-sdk
+      - csv-parser
+    concurrency: 10
+    watch:
+      pattern: ["./index.ts", "src/**/*.ts", "./handler.ts"]
